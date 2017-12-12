@@ -1,0 +1,116 @@
+クラスオブジェクトの管理について
+
+
+例１　小さいデータクラス
+
+struct Vertex {
+float x;
+float y;
+float z;
+};
+
+配列として使う
+
+よくある例
+Vertex vtx[100];
+Vertex* vtx = new Vertex[100];
+vector<Vertex> vtx(100);
+
+小さいデータクラスでは、ポインタのリストは非効率
+Vertex **vtx; 
+vector<Vertex*> vtx;
+
+固定個数のVertexを使いたい場合。
+たとえば、三角形の場合は3個
+
+Vertex* triangle = new Vertexd[3];  //ポインタで扱う　危険？
+struct Triangle {　// クラスオブジェクトにする
+Vertex vtx[3];
+};
+typedef Vertex TriangleT[3];  // typedefする
+
+引数で三角形を渡したい場合。
+
+drawTriangle(const Vertex* triangle) // 危険？
+drawTriangle(const Triangle& triangle) // 安全
+drawTriangle(const TriangleT& triangle) // 安全
+
+ちょっと変わった例
+
+struct TriangleTS : public TriangleT {
+}
+
+ひと固まりのVertexからTriangleを切り出す場合
+
+// count個の三角形を書く
+drawTriangles(const Vertex* vtx, size_t count) {
+  for (size_t n = 0; n < count; ++n) {
+	// クラスオブジェクトTriangleにコピー無に代入したい
+	const Triangle& tri = vtx[n * 3]; // こうしたいけど×
+        // 力技！　プラットフォーム依存なので危険
+	// アライメントの問題、Triangleが非Vertualなクラスであることが必須
+        const Triangle* tri = reinterpret_cast<const Triangle*>(&vtx[n*3]);
+
+        // typedefのTriangleTに代入したい場合
+	const TriangleT* tri = reinterpret_cast<const TriangleT*>(&vtx[n*3]);
+	
+
+※　素直にコピーするコンストラクタを作るのが合理的では？
+
+
+●2次元的な配列の場合
+
+N個のVertexセットをM個使う
+
+// Cライクなnewで確保
+Vertex* vlist[M];
+
+vlist[0] = new Vertex[N];
+
+// vectorで確保
+vector< verctor<Vertex> > vlist;
+vlist[0] = vector<Vertex>(N);
+途中の追加・削除にはコストがかかる
+
+// vector*のvector
+typedef vector<Vertex> VtxVec;
+vector<VtxVex*> vlist;
+vlist[0] = new VtxVex(N);
+途中の追加・削除はやや速い
+
+ポインタの代わりにshared_ptrを使うとよい
+vector<shared_ptr<VtxVex> > vlist;
+
+Mがそれほど多くなくて、頻繁に追加・削除がある場合はlistを使う
+list<shared_ptr<VtxVex>>
+
+●キーで検索したい場合
+
+map<KEY, vector<Vertex> >
+
+個数が非常に多い場合は、ソート済みのvectorかboostのunordered_map
+を使うとよい。
+
+ソート済みvector
+vector<pair<KEY, vector<Vertex> >
+
+boost::unorderd_map<KEY, vector<Vertex> >
+
+メモリ効率、処理速度を計測してみたい。
+
+
+●0から始まる連番のインデックスをキーとして、追加削除が頻繁にある場合。
+OpenGLのGenTextureのような感じ。
+
+
+●キャッシュのアルゴリズムを汎用化したい。
+利用頻度の低いものから排除していくアルゴリズム
+
+
+
+
+
+
+
+
+
